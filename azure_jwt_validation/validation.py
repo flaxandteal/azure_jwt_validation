@@ -59,7 +59,8 @@ class JWTTokenValidator:
                  ad_tenant,
                  application_id,
                  audiences=None,
-                 ms_signing_key_url='https://login.microsoftonline.com/common/discovery/keys'):
+                 ms_signing_key_url='https://login.microsoftonline.com/common/discovery/keys',
+                 openid_configuration_url=None):
         """Validates tokens by checking the signature against the public key.
         Either provide the settings, or
         call the load functions to either get the config from the package resource json, or
@@ -70,6 +71,7 @@ class JWTTokenValidator:
             application_id: The application id the tokens are issued to, ie your app.
             audiences: A list of audience values, generally the same as the application_id
             ms_signing_key_url: Url for Azure's public keys
+            openid_configuration_url: URL for the tenant's OpenID configuration (default: usual AD tenant URL)
         """
         self.ad_tenant = ad_tenant
         self.application_id = application_id
@@ -77,6 +79,7 @@ class JWTTokenValidator:
             raise AttributeError('audiences must be a list of audience names.')
         self.audiences = audiences
         self.ms_signing_key_url = ms_signing_key_url
+        self.openid_configuration_url = openid_configuration_url
         self.openid_config = None
         self.ms_public_keys = None
         self.issuer = None
@@ -150,7 +153,7 @@ class JWTTokenValidator:
             except TokenValidationException:
                 if not refresh_on_missing:
                     raise
-        return config.update_open_id_config(self.ad_tenant)
+        return config.update_open_id_config(self.ad_tenant, self.openid_configuration_url)
 
     def _load_ms_public_keys(self, force_refresh, refresh_on_missing):
         if not force_refresh:

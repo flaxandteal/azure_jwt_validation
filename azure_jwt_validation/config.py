@@ -18,18 +18,20 @@ PUBLIC_KEYS_FILENAME = 'public_keys.json'
 config_cache = {}
 
 
-def get_open_id_configuration_from_azure(ad_tenant):
+def get_open_id_configuration_from_azure(ad_tenant, openid_configuration_url=None):
     """Given an AD tenant, returns the open id configuration from Azure.
 
     Args:
         ad_tenant: Your ad tenant. For example yourtenant.onmicrosoft.com
+        openid_configuration_url: URL for the tenant's OpenID configuration (default: usual AD tenant URL)
 
     .. note:: In production only run this periodically and cache the result.
 
     Raises:
         :exc:`TokenValidationException`: When the configuration cannot be retrieved.
     """
-    openid_configuration_url = f'https://login.microsoftonline.com/{ad_tenant}/.well-known/openid-configuration'
+    if openid_configuration_url is None:
+        openid_configuration_url = f'https://login.microsoftonline.com/{ad_tenant}/.well-known/openid-configuration'
     try:
         response = requests.get(openid_configuration_url)
         return response.json()
@@ -39,18 +41,19 @@ def get_open_id_configuration_from_azure(ad_tenant):
         )
 
 
-def update_open_id_config(ad_tenant: str):
+def update_open_id_config(ad_tenant: str, openid_configuration_url=None):
     """Given an AD tenant, updates the cached package resource openid_config.json.
 
     Args:
         ad_tenant: Your ad tenant. For example yourtenant.onmicrosoft.com
+        openid_configuration_url: URL for the tenant's OpenID configuration (default: usual AD tenant URL)
 
     .. note:: In production only run this periodically and cache the result.
 
     Raises:
         :exc:`TokenValidationException`: When the configuration cannot be retrieved.
     """
-    data = get_open_id_configuration_from_azure(ad_tenant)
+    data = get_open_id_configuration_from_azure(ad_tenant, openid_configuration_url)
     config_cache['openid_config'] = data
     path = get_pkg_resource_path(PACKAGE, 'openid_config.json')
     path.write_text(json.dumps(data, indent=2))
