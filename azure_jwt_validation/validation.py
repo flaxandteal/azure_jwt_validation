@@ -58,7 +58,7 @@ class JWTTokenValidator:
     def __init__(self,
                  ad_tenant,
                  application_id,
-                 audiences=None,
+                 audience=None,
                  ms_signing_key_url='https://login.microsoftonline.com/common/discovery/keys',
                  openid_configuration_url=None):
         """Validates tokens by checking the signature against the public key.
@@ -69,15 +69,15 @@ class JWTTokenValidator:
         Args:
             ad_tenant: Ad tenant name example testname.onmicrosoft.com
             application_id: The application id the tokens are issued to, ie your app.
-            audiences: A list of audience values, generally the same as the application_id
+            audience: A an audience value, generally the same as the application_id
             ms_signing_key_url: Url for Azure's public keys
             openid_configuration_url: URL for the tenant's OpenID configuration (default: usual AD tenant URL)
         """
         self.ad_tenant = ad_tenant
         self.application_id = application_id
-        if isinstance(audiences, str) or not isinstance(audiences, Sequence):
-            raise AttributeError('audiences must be a list of audience names.')
-        self.audiences = audiences
+        if not isinstance(audience, str):
+            raise AttributeError('audience must be a string audience names.')
+        self.audience = audience
         self.ms_signing_key_url = ms_signing_key_url
         self.openid_configuration_url = openid_configuration_url
         self.openid_config = None
@@ -89,8 +89,8 @@ class JWTTokenValidator:
         kwargs = {}
         if self.issuer:
             kwargs['issuer'] = self.issuer
-        if self.audiences:
-            kwargs['audiences'] = self.audiences
+        if self.audience:
+            kwargs['audience'] = self.audience
         jwk = self.get_jwk(token)
         return validate_jwt(token, jwk, **kwargs)
 
