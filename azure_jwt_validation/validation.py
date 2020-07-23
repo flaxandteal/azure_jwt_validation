@@ -7,8 +7,8 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicNumbers
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
-from azure_jwt_validation import TokenValidationException, InvalidAuthorizationToken
-from azure_jwt_validation import config
+from .exceptions import TokenValidationException, InvalidAuthorizationToken
+from . import config
 
 
 RequestException = requests.exceptions.RequestException

@@ -6,8 +6,8 @@ from typing import List, Dict
 import requests
 from requests.exceptions import RequestException
 
-from azure_jwt_validation.exceptions import TokenValidationException
-from azure_jwt_validation.resources import get_pkg_resource_path
+from .exceptions import TokenValidationException
+from .resources import get_pkg_resource_path
 
 logger = logging.getLogger(__name__)
 
