@@ -159,7 +159,7 @@ def _populate_cache_from_file(key: str, config_cache_path: Union[str, None]):
         if config_cache_path is None:
             config_cache[key] = _get_resource_obj(file_name)
         else:
-            with open(file_name, 'r') as f:
+            with open(os.path.join(config_cache_path, file_name), 'r') as f:
                 config_cache[key] = json.load(f)
     except JSONDecodeError:
         pass

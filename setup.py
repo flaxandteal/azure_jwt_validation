@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='azure_jwt_validation',
-    version='0.1.3',
+    version='0.1.4',
     description='Helper to validate jwt tokens signed by Azure AD.',
     url='https://github.com/JonnyWaffles/azure_jwt_validation',
     author='Jonny Fuller',
