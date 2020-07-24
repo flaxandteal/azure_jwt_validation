@@ -65,7 +65,7 @@ def update_open_id_config(ad_tenant: str, openid_configuration_url=None, config_
     else:
         path = os.path.join(config_cache_path, 'openid_config.json')
         with open(path, 'w') as f:
-            json.dump(f, data, indent=2)
+            json.dump(data, f, indent=2)
 
     return data
 
@@ -138,7 +138,7 @@ def update_current_microsoft_public_keys_file(
     else:
         path = os.path.join(config_cache_path, PUBLIC_KEYS_FILENAME)
         with open(path, 'w') as f:
-            json.dump(f, key_list, indent=2)
+            json.dump(key_list, f, indent=2)
 
     return key_list
 
