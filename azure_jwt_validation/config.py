@@ -174,14 +174,17 @@ def get_cache(config_cache_path=None, reload=False):
         if config_cache_path is None:
             config_cache_path = CONFIG_CACHE_PATH
         # Useful first time the module loads
-        _populate_cache_from_file('openid_config', config_cache_path)
-        _populate_cache_from_file('public_keys', config_cache_path)
+        try:
+            _populate_cache_from_file('openid_config', config_cache_path)
+            _populate_cache_from_file('public_keys', config_cache_path)
+        except FileNotFoundError:
+            logger.warning(f'Config not yet cached.')
+        else:
+            expected = ('openid_config', 'public_keys')
 
-        expected = ('openid_config', 'public_keys')
-
-        for config_name in expected:
-            exists = config_cache.get(config_name)
-            if not exists:
-                logger.warning(f'Expected config {config_name} not found please call the appropriate setup function.')
+            for config_name in expected:
+                exists = config_cache.get(config_name)
+                if not exists:
+                    logger.warning(f'Expected config {config_name} not found please call the appropriate setup function.')
 
     return config_cache
