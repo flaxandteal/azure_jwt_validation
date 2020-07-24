@@ -1,7 +1,8 @@
+import os
 import json
 import logging
 from json.decoder import JSONDecodeError
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import requests
 from requests.exceptions import RequestException
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 PACKAGE = 'azure_jwt_validation'
 OPENID_CONFIG_FILENAME = 'openid_config.json'
 PUBLIC_KEYS_FILENAME = 'public_keys.json'
+CONFIG_CACHE_PATH = os.environ.get('AZURE_JWT_CONFIG_CACHE', None)
 
 config_cache = {}
 
@@ -41,7 +43,7 @@ def get_open_id_configuration_from_azure(ad_tenant, openid_configuration_url=Non
         )
 
 
-def update_open_id_config(ad_tenant: str, openid_configuration_url=None):
+def update_open_id_config(ad_tenant: str, openid_configuration_url=None, config_cache_path=None):
     """Given an AD tenant, updates the cached package resource openid_config.json.
 
     Args:
@@ -54,9 +56,17 @@ def update_open_id_config(ad_tenant: str, openid_configuration_url=None):
         :exc:`TokenValidationException`: When the configuration cannot be retrieved.
     """
     data = get_open_id_configuration_from_azure(ad_tenant, openid_configuration_url)
+    config_cache = get_cache(config_cache_path)
     config_cache['openid_config'] = data
-    path = get_pkg_resource_path(PACKAGE, 'openid_config.json')
-    path.write_text(json.dumps(data, indent=2))
+
+    if config_cache_path is None:
+        path = get_pkg_resource_path(PACKAGE, 'openid_config.json')
+        path.write_text(json.dumps(data, indent=2))
+    else:
+        path = os.path.join(config_cache_path, 'openid_config.json')
+        with open(path, 'w') as f:
+            json.dump(f, data, indent=2)
+
     return data
 
 
@@ -68,7 +78,7 @@ def _get_resource_obj(name: str):
 def get_cached_open_id_config() -> dict:
     """Returns the open_id config from the openid_config.json file or cache."""
     try:
-        return config_cache['openid_config']
+        return get_cache()['openid_config']
     except KeyError:
         raise TokenValidationException(
             'Open id config not found in cache or openid_config.json. '
@@ -79,7 +89,7 @@ def get_cached_open_id_config() -> dict:
 def get_cached_public_keys() -> List[Dict]:
     """Returns the public keys from the public_keys.json file or cache."""
     try:
-        return config_cache['public_keys']
+        return get_cache()['public_keys']
     except KeyError:
         raise TokenValidationException(
             'Public keys not found in cache or public_keys.json. '
@@ -114,16 +124,26 @@ def get_current_microsoft_public_keys(ms_signing_key_url='https://login.microsof
 
 
 def update_current_microsoft_public_keys_file(
-        ms_signing_key_url='https://login.microsoftonline.com/common/discovery/keys'):
+        ms_signing_key_url='https://login.microsoftonline.com/common/discovery/keys',
+        config_cache_path=None
+    ):
     """Writes the list of currently in use public keys to the package resource public_keys.json."""
     key_list = get_current_microsoft_public_keys(ms_signing_key_url)
+    config_cache = get_cache(config_cache_path)
     config_cache['public_keys'] = key_list
-    path = get_pkg_resource_path(PACKAGE, PUBLIC_KEYS_FILENAME)
-    path.write_text(json.dumps(key_list, indent=2))
+
+    if config_cache_path is None:
+        path = get_pkg_resource_path(PACKAGE, PUBLIC_KEYS_FILENAME)
+        path.write_text(json.dumps(key_list, indent=2))
+    else:
+        path = os.path.join(config_cache_path, PUBLIC_KEYS_FILENAME)
+        with open(path, 'w') as f:
+            json.dump(f, key_list, indent=2)
+
     return key_list
 
 
-def _populate_cache_from_file(key: str):
+def _populate_cache_from_file(key: str, config_cache_path: Union[str, None]):
     """Try to update the config cache from the files.
 
     Args:
@@ -136,18 +156,32 @@ def _populate_cache_from_file(key: str):
     file_name = f'{key}.json'
 
     try:
-        config_cache[key] = _get_resource_obj(file_name)
+        if config_cache_path is None:
+            config_cache[key] = _get_resource_obj(file_name)
+        else:
+            with open(file_name, 'r') as f:
+                config_cache[key] = json.load(f)
     except JSONDecodeError:
         pass
 
 
-# Useful first time the module loads
-_populate_cache_from_file('openid_config')
-_populate_cache_from_file('public_keys')
 
-expected = ('openid_config', 'public_keys')
+def get_cache(config_cache_path=None, reload=False):
+    global config_cache
 
-for config_name in expected:
-    exists = config_cache.get(config_name)
-    if not exists:
-        logger.warning(f'Expected config {config_name} not found please call the appropriate setup function.')
+    # FIXME: make this whole module an object
+    if len(config_cache) == 0 or reload:
+        if config_cache_path is None:
+            config_cache_path = CONFIG_CACHE_PATH
+        # Useful first time the module loads
+        _populate_cache_from_file('openid_config', config_cache_path)
+        _populate_cache_from_file('public_keys', config_cache_path)
+
+        expected = ('openid_config', 'public_keys')
+
+        for config_name in expected:
+            exists = config_cache.get(config_name)
+            if not exists:
+                logger.warning(f'Expected config {config_name} not found please call the appropriate setup function.')
+
+    return config_cache

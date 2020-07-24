@@ -60,7 +60,8 @@ class JWTTokenValidator:
                  application_id,
                  audience=None,
                  ms_signing_key_url='https://login.microsoftonline.com/common/discovery/keys',
-                 openid_configuration_url=None):
+                 openid_configuration_url=None,
+                 config_cache_path=None):
         """Validates tokens by checking the signature against the public key.
         Either provide the settings, or
         call the load functions to either get the config from the package resource json, or
@@ -83,6 +84,9 @@ class JWTTokenValidator:
         self.openid_config = None
         self.ms_public_keys = None
         self.issuer = None
+        self.config_cache_path = config_cache_path
+        if config_cache_path is not None:
+            config.get_cache(config_cache_path, True)
 
     def validate_jwt(self, token: str):
         """Validates the given token."""
@@ -153,7 +157,11 @@ class JWTTokenValidator:
             except TokenValidationException:
                 if not refresh_on_missing:
                     raise
-        return config.update_open_id_config(self.ad_tenant, self.openid_configuration_url)
+        return config.update_open_id_config(
+            self.ad_tenant,
+            self.openid_configuration_url,
+            self.config_cache_path
+        )
 
     def _load_ms_public_keys(self, force_refresh, refresh_on_missing):
         if not force_refresh:
@@ -162,4 +170,7 @@ class JWTTokenValidator:
             except TokenValidationException:
                 if not refresh_on_missing:
                     raise
-        return config.update_current_microsoft_public_keys_file(self.ms_signing_key_url)
+        return config.update_current_microsoft_public_keys_file(
+            self.ms_signing_key_url,
+            self.config_cache_path
+        )
