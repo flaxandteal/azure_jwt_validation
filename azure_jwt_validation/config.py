@@ -62,6 +62,8 @@ def update_open_id_config(ad_tenant: str, openid_configuration_url=None, config_
     if config_cache_path is None:
         path = get_pkg_resource_path(PACKAGE, 'openid_config.json')
         path.write_text(json.dumps(data, indent=2))
+    elif hasattr(config_cache_path, 'set'):
+        config_cache_path.set('openid_config', data)
     else:
         path = os.path.join(config_cache_path, 'openid_config.json')
         with open(path, 'w') as f:
@@ -135,6 +137,8 @@ def update_current_microsoft_public_keys_file(
     if config_cache_path is None:
         path = get_pkg_resource_path(PACKAGE, PUBLIC_KEYS_FILENAME)
         path.write_text(json.dumps(key_list, indent=2))
+    elif hasattr(config_cache_path, 'set'):
+        config_cache_path.set('public_keys', key_list)
     else:
         path = os.path.join(config_cache_path, PUBLIC_KEYS_FILENAME)
         with open(path, 'w') as f:
@@ -143,7 +147,7 @@ def update_current_microsoft_public_keys_file(
     return key_list
 
 
-def _populate_cache_from_file(key: str, config_cache_path: Union[str, None]):
+def _populate_cache_from_file(key: str, config_cache_path):
     """Try to update the config cache from the files.
 
     Args:
@@ -158,6 +162,11 @@ def _populate_cache_from_file(key: str, config_cache_path: Union[str, None]):
     try:
         if config_cache_path is None:
             config_cache[key] = _get_resource_obj(file_name)
+        elif hasattr(config_cache_path, 'get'):
+            try:
+                config_cache[key] = config_cache_path.get(key)
+            except KeyError:
+                raise FileNotFoundError()
         else:
             with open(os.path.join(config_cache_path, file_name), 'r') as f:
                 config_cache[key] = json.load(f)
@@ -169,14 +178,18 @@ def _populate_cache_from_file(key: str, config_cache_path: Union[str, None]):
 def get_cache(config_cache_path=None, reload=False):
     global config_cache
 
+    if 'path' in config_cache and config_cache['path']:
+        config_cache_path = config_cache['path']
+
     # FIXME: make this whole module an object
-    if len(config_cache) == 0 or reload:
+    if (config_cache_path and hasattr(config_cache_path, 'get')) or len(config_cache) == 0 or reload:
         if config_cache_path is None:
             config_cache_path = CONFIG_CACHE_PATH
         # Useful first time the module loads
         try:
             _populate_cache_from_file('openid_config', config_cache_path)
             _populate_cache_from_file('public_keys', config_cache_path)
+            config_cache['path'] = config_cache_path
         except FileNotFoundError:
             logger.warning(f'Config not yet cached.')
         else:
